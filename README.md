@@ -195,6 +195,7 @@ Kunjungi folder [`examples/`](examples/) untuk melihat implementasi skrip demons
 * [`examples/01_quickstart_moa_debate.py`](examples/01_quickstart_moa_debate.py) - Implementasi multi-round debate antar 2 agen spesialis & 1 arbiter.
 * [`examples/02_autonomous_triage.py`](examples/02_autonomous_triage.py) - Triase dinamis berbasis tool pemanggilan delegasi `@cos`.
 * [`examples/03_secure_governance.py`](examples/03_secure_governance.py) - Pembuktian pertahanan sandbox dan circuit breaker.
+* [`examples/04_graph_memory.py`](examples/04_graph_memory.py) - Mesin memori graf lokal persisten (Obsidian-compatible vault, BM25 progressive disclosure, & relasi wikilink dua-arah).
 
 ---
 
