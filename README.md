@@ -1,7 +1,7 @@
 # Astraea ADK (LegionADK)
 ### Enterprise-Grade Mixture-of-Agents (MoA) Orchestration & Autonomous Agent Development Kit
 
-[![PyPI version](https://img.shields.io/badge/pypi-v1.0.0-blue.svg)](https://pypi.org/project/astraea-adk/)
+[![PyPI version](https://img.shields.io/badge/pypi-v1.0.1-blue.svg)](https://pypi.org/project/astraea-adk/)
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![Pydantic v2](https://img.shields.io/badge/pydantic-v2%20(frozen=True)-green.svg)](https://docs.pydantic.dev/)
 [![Binary Wheel](https://img.shields.io/badge/distribution-C--Extension%20Native%20Binary-darkviolet.svg)]()
