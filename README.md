@@ -5,7 +5,7 @@
 [![API Reference](https://img.shields.io/badge/docs-API%20Reference-blueviolet.svg)](documentation.md)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
 
-**Astraea-ADK** (`LegionADK`) adalah runtime eksekusi agen tunggal dan multi-agen (*Mixture-of-Agents*) untuk Python. Inti framework ini dibangun hanya di atas pustaka standar Python, `pydantic>=2.0`, dan `httpx`—tanpa ketergantungan pada database vektor eksternal, server graf, maupun lapisan pembungkus (*wrapper*) prompt yang berat.
+**Astraea-ADK** (`LegionADK`) adalah runtime eksekusi agen tunggal dan multi-agen (*Mixture-of-Agents*) untuk Python. Inti framework ini dibangun hanya di atas pustaka standar Python, `pydantic>=2.0`, dan `httpx` — tanpa ketergantungan pada database vektor eksternal, server graf, maupun lapisan pembungkus (*wrapper*) prompt yang berat.
 
 ![Astraea ADK System Architecture](docs/assets/system_architecture.png)
 
@@ -42,11 +42,13 @@ Instal paket distribusi biner menggunakan `pip`:
 
 ```bash
 pip install astraea-adk
+```
 
+Salin berkas konfigurasi contoh `examples/.env.example` menjadi `.env` di direktori kerja Anda:
 
-Salin berkas konfigurasi contoh examples/.env.example menjadi .env di direktori kerja Anda:
+```dotenv
 CUSTOM_PROVIDER_API_KEY=your_api_key_here
-CUSTOM_PROVIDER_BASE_URL=[https://api.your-provider.com/v1](https://api.your-provider.com/v1)
+CUSTOM_PROVIDER_BASE_URL=https://api.your-provider.com/v1
 
 TEST_PRIMARY_PROVIDER=custom
 TEST_PRIMARY_MODEL=deepseek-v4.1-flash
@@ -57,14 +59,21 @@ TEST_PRIMARY_MODEL=deepseek-v4.1-flash
 # GEMINI_API_KEY=AIzaSy...
 # OLLAMA_BASE_URL=http://localhost:11434/v1
 # VLLM_BASE_URL=http://localhost:8000/v1
+```
 
+---
 
-Contoh Penggunaan Cepat
-1. Orkestrasi Multi-Agen & Strict Chain-of-Command (LegionADK.protocol)
-Fungsi dispatch_envelope menganalisis target amplop dan memilih jalur eksekusi secara otomatis:
-Triase Otonom (AUTONOMOUS_TRIAGE): Jika pesan dikirim ke satu koordinator (misal @cos atau @secretary), koordinator mengevaluasi direktori tim dan mendelegasikan tugas ke spesialis yang relevan.
-Debat Eksplisit (EXPLICIT_MOA): Jika pesan ditujukan ke \ge 2 agen atau menyebut beberapa @handle, para Proposer berjalan paralel lalu disintesis oleh @Aggregator.
-Agen Tunggal (STANDALONE): Jika pesan ditujukan ke satu agen biasa tanpa delegasi.
+## Contoh Penggunaan Cepat
+
+### 1. Orkestrasi Multi-Agen & Strict Chain-of-Command (`LegionADK.protocol`)
+
+Fungsi `dispatch_envelope` menganalisis target amplop dan memilih jalur eksekusi secara otomatis:
+
+- **Triase Otonom (AUTONOMOUS_TRIAGE)**: Jika pesan dikirim ke satu koordinator (misal `@cos` atau `@secretary`), koordinator mengevaluasi direktori tim dan mendelegasikan tugas ke spesialis yang relevan.
+- **Debat Eksplisit (EXPLICIT_MOA)**: Jika pesan ditujukan ke ≥ 2 agen atau menyebut beberapa `@handle`, para Proposer berjalan paralel lalu disintesis oleh `@Aggregator`.
+- **Agen Tunggal (STANDALONE)**: Jika pesan ditujukan ke satu agen biasa tanpa delegasi.
+
+```python
 import asyncio
 from LegionADK import (
     AgentRoster,
@@ -120,10 +129,13 @@ async def main() -> None:
     print(result.final_content)
 
 asyncio.run(main())
+```
 
+### 2. Autonomous Graph Memory (`LegionADK.memory`)
 
-2. Autonomous Graph Memory (LegionADK.memory)
-Mendaftarkan 4 tool navigasi dan penulisan pengetahuan di atas folder Markdown lokal (kompatibel dengan vault Obsidian maupun berkas SKILL.md open-source):
+Mendaftarkan 4 tool navigasi dan penulisan pengetahuan di atas folder Markdown lokal (kompatibel dengan vault Obsidian maupun berkas `SKILL.md` open-source):
+
+```python
 from pathlib import Path
 from LegionADK import register_graph_memory_tools
 
@@ -140,28 +152,34 @@ memory = register_graph_memory_tools(
 
 health = memory.check_health()
 print(f"Nodes: {health.total_nodes}, Edges: {health.total_edges}, Orphans: {health.orphan_nodes}")
+```
 
+---
 
-Menjalankan Skrip Contoh (examples/)
-Repositori ini menyertakan 4 skrip contoh siap pakai di dalam direktori examples/:
-Berkas
-Deskripsi
-examples/01_quickstart_moa_debate.py
-Diskusi eksplisit multi-putaran antar-spesialis (run_moa_debate) yang disintesis oleh agregator.
-examples/02_autonomous_triage.py
-Triase mandiri oleh koordinator (run_autonomous_triage) dan pendelegasian berjenjang (Strict Chain-of-Command).
-examples/03_secure_governance.py
-Demonstrasi RBAC, penolakan path traversal oleh DeterministicVerifier (CoV), self-repair agen, dan eskalasi SmartGuardian.
-examples/04_graph_memory.py
-Penelusuran bertahap 3-lapis pada MarkdownGraphMemory dan penulisan pengetahuan baru secara atomik.
+## Menjalankan Skrip Contoh (`examples/`)
+
+Repositori ini menyertakan 4 skrip contoh siap pakai di dalam direktori `examples/`:
+
+| Berkas | Deskripsi |
+| :--- | :--- |
+| `examples/01_quickstart_moa_debate.py` | Diskusi eksplisit multi-putaran antar-spesialis (`run_moa_debate`) yang disintesis oleh agregator. |
+| `examples/02_autonomous_triage.py` | Triase mandiri oleh koordinator (`run_autonomous_triage`) dan pendelegasian berjenjang (*Strict Chain-of-Command*). |
+| `examples/03_secure_governance.py` | Demonstrasi RBAC, penolakan *path traversal* oleh `DeterministicVerifier` (CoV), *self-repair* agen, dan eskalasi `SmartGuardian`. |
+| `examples/04_graph_memory.py` | Penelusuran bertahap 3-lapis pada `MarkdownGraphMemory` dan penulisan pengetahuan baru secara atomik. |
 
 Jalankan contoh langsung dari terminal:
+
+```bash
 python examples/01_quickstart_moa_debate.py
 python examples/02_autonomous_triage.py
 python examples/03_secure_governance.py
 python examples/04_graph_memory.py
+```
 
+Referensi lengkap seluruh kelas kontrak, tanda tangan fungsi, dan parameter tersedia di `documentation.md`.
 
-Referensi lengkap seluruh kelas kontrak, tanda tangan fungsi, dan parameter tersedia di documentation.md.
-Lisensi
-Proyek ini dilindungi di bawah lisensi Proprietary & Confidential. Hak Cipta © Hillario RZA.
+---
+
+## Lisensi
+
+Proyek ini dilindungi di bawah lisensi Proprietary & Confidential. Hak Cipta © HillarioRZA.
