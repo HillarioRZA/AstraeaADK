@@ -82,6 +82,22 @@ Mode eksekusi pada B4 bukan setting statis, melainkan hasil keputusan model pada
 
 ---
 
+## Pembaruan 1.5.1: Benchmark Dataset Asli
+
+Pada rilis 1.5.1, Pilar A diukur ulang dan pengukuran ditambah dengan **dataset asli** BFCL v3, TAU-bench, dan LOCOMO (bukan skenario pemodelan internal). Seluruhnya dijalankan dari paket `astraea-adk` 1.5.1 yang terpasang dari PyPI, model `deepseek-v4.1-flash-1017`, temperature 0.0.
+
+**Pilar A pada 1.5.1:** E1 `1052.88 ms | Peak RAM: 10.16 MB`, E2 `1039.1 ms total (10.39 ms/turn)`, E3 `100% Identik Lintas 20 Turn`, E4 `Baca 20/42872 tok (Hemat 99.95%)`, E5 `50/50 Pulih | 0 LLM Retry Tok`.
+
+| Benchmark Dataset Asli | Cakupan | Hasil |
+| :--- | :--- | :--- |
+| **BFCL v3** (dataset resmi, pencocokan AST) | 200 soal: simple 100 + multiple 100 | **93,0% (186/200)** |
+| **TAU-bench retail** (dataset resmi, reward state DB persis + user simulator LLM) | 20 tugas pertama dari 115 | **30,0% (6/20)**, 0 pelanggaran kebijakan |
+| **LOCOMO** (dataset resmi, conv-26 berstrata) | 20 soal dari 199 | **50,0% (10/20)** |
+
+Angka dataset asli mengukur kemampuan **model** yang tersalurkan melalui harness Astraea, bukan efisiensi mesin; ketiganya adalah pengukuran subset dengan metodologi resmi, **bukan** skor leaderboard resmi. Metodologi lengkap, analisis kegagalan, dan skrip reproduksi: **[BENCHMARKS.md](BENCHMARKS.md)**.
+
+---
+
 ## Instalasi & Konfigurasi
 
 Instal paket distribusi biner menggunakan `pip`:
