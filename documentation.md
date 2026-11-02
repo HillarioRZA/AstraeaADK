@@ -14,6 +14,8 @@ Dokumen ini memuat spesifikasi teknis untuk seluruh kelas kontrak (*Pydantic v2 
 6. [Runtime Turn Engine (`LegionADK.runtime`)](#6-runtime-turn-engine-legionadkruntime)
 7. [Autonomous Graph Memory (`LegionADK.memory`)](#7-autonomous-graph-memory-legionadkmemory)
 8. [Protocol & MoA Orchestrator (`LegionADK.protocol`)](#8-protocol--moa-orchestrator-legionadkprotocol)
+9. [Terminal Interaktif REPL CLI (`LegionADK.interactive_cli`)](#9-terminal-interaktif-repl-cli-legionadkinteractive_cli)
+10. [Catatan Rilis & Ringkasan Pembaruan (v1.5.0 & v1.5.1)](#10-catatan-rilis--ringkasan-pembaruan-v150--v151)
 
 ---
 
@@ -23,8 +25,9 @@ Seluruh simbol utama dapat diimpor langsung dari akar paket `LegionADK`:
 
 ```python
 from LegionADK import (
-    # Core
+    # Core & Event Streaming
     LLMSpec, MessageEnvelope, CancellationToken, MoAMetadata, contract_message,
+    StreamEvent, StreamEventType, emit_stream_event,
     # Protocol (MoA)
     AgentRoster, OrchestrationPolicy, OrchestrationResult, ProposalRecord,
     dispatch_envelope, run_moa_debate, run_autonomous_triage,
@@ -39,15 +42,17 @@ from LegionADK import (
     FileLockManager, GraphIndexer, GraphNavigator, GraphMutator,
     # Governance
     DeterministicVerifier, SmartGuardian, ToolCircuitBreaker,
-    # Tools & RBAC
+    # Tools, RBAC & MCP Bridge
     ToolSpec, register_tool, execute_registered_tool,
     clear_tool_registry, get_registered_tool, list_registered_tools, unregister_tool,
+    mount_mcp_server, unmount_mcp_tools, MCPMountReceipt,
     # Gateway
     ModelRouter, LEGION_CACHE_BOUNDARY,
     assemble_cached_system_prompt, assemble_cached_system_prompt_from_spec,
     repair_malformed_tool_call, parse_and_repair_json,
 )
 ```
+
 
 ---
 
@@ -135,6 +140,29 @@ Metode & properti:
 - `reason -> str`: Alasan pembatalan.
 - `raise_if_cancelled() -> None`: Melempar `asyncio.CancelledError` jika dan hanya jika `is_cancelled == True` (tidak melempar saat hanya pause).
 
+### 2.5 `StreamEvent` & Event Streaming System (`stream_events.py`)
+
+Mendukung penerusan token, jejak penalaran (*thinking process*), dan peristiwa eksekusi alat secara *real-time* ke antarmuka terminal/UI tanpa merusak kontrak data statis `TurnResult` dan `OrchestrationResult`.
+
+```python
+from LegionADK.core.stream_events import (
+    StreamEvent,
+    StreamEventType,
+    emit_stream_event,
+)
+```
+
+Tipe Event (`StreamEventType`):
+
+- `StreamEventType.TOKEN` — Potongan teks (*delta token*) konten akhir yang di-stream langsung dari model.
+- `StreamEventType.THOUGHT` — Potongan teks penalaran internal (contoh: blok `<think>...</think>` dari DeepSeek R1 atau format `reasoning_content`).
+- `StreamEventType.TOOL_CALL` — Model memulai pemanggilan tool (memuat `tool_name` dan `arguments`).
+- `StreamEventType.TOOL_RESULT` — Tool selesai dieksekusi (memuat `tool_name`, `status`, dan `info`).
+- `StreamEventType.TURN_START` — Putaran agen dimulai.
+- `StreamEventType.TURN_END` — Putaran agen selesai beserta status final.
+
+Fungsi `dispatch_envelope`, `execute_turn`, `run_moa_debate`, dan `run_autonomous_triage` menerima argumen opsional `on_event: Optional[Callable[[StreamEvent], Coroutine[Any, Any, None]]]`.
+
 ---
 
 ## 3. Gateway & Routing Subsystem (`LegionADK.gateway`)
@@ -180,6 +208,26 @@ parse_and_repair_json(raw_str: str) -> Optional[Dict[str, Any]]
 repair_malformed_tool_call(tool_calls: List[Dict[str, Any]]) -> List[Dict[str, Any]]
 ```
 
+### 3.4 Proxy Environment & Sanitasi `NO_PROXY` IPv6 Berkurung (v1.5.1)
+
+Memastikan seluruh panggilan HTTP adapter gateway (Custom REST, OpenAI-Compatible, Anthropic, Gemini) menghormati konfigurasi proxy perusahaan standar (`HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`, dan `no_proxy`) tanpa mengalami kegagalan fatal pada environment yang mendefinisikan alamat IPv6 berkurung seperti `[::1]`.
+
+```python
+from LegionADK.gateway.adapter.base_adapter import (
+    create_async_client,
+    sanitized_proxy_env,
+    _normalize_no_proxy,
+)
+```
+
+- **Akar Masalah**: Parser internal `httpx` (`get_environment_proxies`) tersedak pada kurung siku IPv6 murni `[::1]`, menghasilkan error fatal `InvalidURL: Invalid port: ':1]'` sebelum request dikirim.
+- **Normalisasi Sesaat (`sanitized_proxy_env`)**:
+  - `[::1]` dinormalkan menjadi `::1` sehingga dikenali sebagai host IPv6 yang valid.
+  - `[::1]:port` dinormalkan menjadi `all://[::1]:port`.
+  - Bersifat non-destruktif dan idempoten: `os.environ` asli dikembalikan persis seperti semula begitu objek `AsyncClient` terbentuk.
+- **Konstruksi Klien Terpusat (`create_async_client`)**:
+  Seluruh adapter gateway membangun klien HTTP menggunakan helper bersama ini dengan parameter `timeout=120.0` dan `trust_env=True`.
+
 ---
 
 ## 4. Tools & RBAC Subsystem (`LegionADK.tools`)
@@ -216,6 +264,18 @@ Menjaga agar keluaran tool tidak pernah melebihi batas keras 51.200 bytes (50 KB
 - `process_output_sync(raw_output: str, *, spill_dir: Optional[str] = None, session_id: str = "default") -> SpillResult`: Jika ukuran UTF-8 ≤ 51.200 bita, dikembalikan utuh (`truncated=False`). Jika melampaui batas, isi lengkap disimpan ke berkas `.astraea_spill/spill_<session>_<ts>_<hash>.log` dan teks dipotong secara aman tanpa membelah karakter UTF-8 multi-byte disertai penanda `[OUTPUT_TRUNCATED_EXCEEDED_50KB]`.
 - `read_spilled_output_sync(spill_path: str) -> str`: Membaca kembali berkas spill yang sah (menolak pembacaan path arbitrer di luar direktori spill).
 - `prune_spill_cache_sync(spill_dir: Optional[str] = None, max_files: int = 50, max_age_seconds: int = 86400) -> int`: Membersihkan berkas spill berdasarkan TTL dan antrean FIFO tanpa menyentuh berkas asing.
+
+### 4.3 Model Context Protocol (MCP) Bridge (`mcp_bridge.py`)
+
+Menjembatani ekosistem perkakas berbasis standar **Anthropic Model Context Protocol (MCP)** melalui protokol standar input/output (stdio JSON-RPC 2.0). Seluruh perkakas yang diekspos oleh server MCP otomatis dikonversi menjadi `ToolSpec` native Astraea ADK dan dapat diatur hak aksesnya dengan RBAC.
+
+```python
+from LegionADK.tools import mount_mcp_server, unmount_mcp_tools, MCPMountReceipt
+```
+
+Fungsi utama:
+- `await mount_mcp_server(command: str, args: Optional[List[str]] = None, env: Optional[Dict[str, str]] = None, name_prefix: str = "mcp", risk_tier: Literal[0, 1, 2] = 1, timeout: float = 30.0) -> MCPMountReceipt`: Menjalankan subproses server MCP, melakukan handshake inisialisasi, mengambil daftar tool via `tools/list`, dan mendaftarkannya ke registri tool ADK dengan prefiks namespace.
+- `await unmount_mcp_tools(mount_id: str) -> bool`: Mencabut seluruh tool yang terpasang dari server MCP tertentu dan menghentikan proses latar belakang secara bersih.
 
 ---
 
@@ -367,9 +427,9 @@ memory = register_graph_memory_tools(
 
 Fungsi ini menginstansiasi `MarkdownGraphMemory` sekaligus mendaftarkan 4 tool ke `permission_registry`:
 
-- `graph:locate` (`risk_tier=0`) — Pencarian Okapi BM25 di RAM + ekspansi tetangga 1-hop dengan prioritas EXTRACTED > INFERRED relevan > INFERRED terbaru.
+- `graph:locate` (`risk_tier=0`) — Pencarian Okapi BM25 di RAM + ekspansi tetangga 1-hop dengan prioritas EXTRACTED > INFERRED relevan > INFERRED terbaru. Hasil pencarian menyertakan `section_id` lengkap (format `slug#section`) yang siap digunakan langsung oleh model.
 - `graph:inspect_outline` (`risk_tier=0`) — Mengambil `NodeOutline` beserta `content_hash` dari RAM tanpa I/O disk.
-- `graph:read_section` (`risk_tier=0`) — Membaca irisan byte `[start_byte:end_byte]` via `seek()` biner dengan fallback prefix/Jaccard ≥ 0.75 dan proteksi spill guard 50 KB.
+- `graph:read_section` (`risk_tier=0`) — Membaca irisan byte `[start_byte:end_byte]` via `seek()` biner dengan fallback prefix/Jaccard ≥ 0.75 dan proteksi spill guard 50 KB. Bersifat toleran saat model memasukkan argumen berformat gabungan `slug#heading` maupun argumen terpisah `(document_slug, heading)`.
 - `graph:learn_and_link` (`risk_tier=1`) — Menulis atau memperbarui berkas `.md` secara atomik di bawah `FileLockManager`, dilengkapi validasi `skill_gate`, deteksi duplikat Weighted Jaccard (≥ 0.65), verifikasi OCC `expected_content_hash`, dan umpan balik instant lint (`dangling_links`).
 
 ### 7.3 `FileLockManager` & Atomic I/O (`file_lock_manager.py`)
@@ -446,6 +506,7 @@ async def dispatch_envelope(
     session_states: Optional[Dict[str, SessionState]] = None,
     depth: int = 0,
     active_call_stack: Tuple[str, ...] = (),
+    on_event: Optional[Callable[[StreamEvent], Coroutine[Any, Any, None]]] = None,
 ) -> OrchestrationResult
 ```
 
@@ -467,6 +528,7 @@ async def run_moa_debate(
     session_states: Optional[Dict[str, SessionState]] = None,
     depth: int = 0,
     active_call_stack: Tuple[str, ...] = (),
+    on_event: Optional[Callable[[StreamEvent], Coroutine[Any, Any, None]]] = None,
 ) -> OrchestrationResult
 ```
 
@@ -490,6 +552,7 @@ async def run_autonomous_triage(
     active_call_stack: Tuple[str, ...] = (),
     initial_triage_turn: Optional[TurnResult] = None,
     initial_targets: Optional[Sequence[str]] = None,
+    on_event: Optional[Callable[[StreamEvent], Coroutine[Any, Any, None]]] = None,
 ) -> OrchestrationResult
 ```
 
@@ -499,3 +562,50 @@ async def run_autonomous_triage(
 - `resolve_recipient_handles(sender: str, raw_targets: Union[str, Sequence[str]], roster: AgentRoster) -> List[str]`: Mengekspansi `@all` dan membuang handle milik sender (mencegah self-mention loop).
 - `register_comm_delegate_tool(allow_overwrite: bool = True) -> ToolSpec`: Mendaftarkan tool `comm:delegate(targets: List[str], topic: str)` (`risk_tier=0`).
 - `extract_delegated_targets(content: str = "", tool_calls: Optional[Sequence[Dict[str, Any]]] = None, roster: Optional[AgentRoster] = None) -> List[str]`: Mengekstrak target delegasi gabungan dari argumen `comm:delegate` dan mention di dalam teks jawaban.
+
+---
+
+## 9. Terminal Interaktif REPL CLI (`LegionADK.interactive_cli`)
+
+Modul antarmuka terminal mandiri berbasis Read-Eval-Print Loop (REPL) yang memungkinkan pengguna berinteraksi langsung dengan orkestrator tim multi-agen secara interaktif dengan visualisasi streaming token dan proses penalaran (*thinking*) secara *real-time*.
+
+```bash
+# Menjalankan antarmuka terminal interaktif Astraea ADK
+python -m LegionADK.interactive_cli
+```
+
+Fitur utama:
+- **Streaming Token & Penalaran**: Menampilkan token kata per kata secara langsung, memisahkan blok penalaran (*thinking block*) dengan warna kontras abu-abu.
+- **Perintah CLI Bawaan**:
+  - `/exit` atau `/quit` — Mengakhiri sesi interaktif.
+  - `/roster` — Menampilkan direktori agen, spesialisasi peran, dan wewenang tool masing-masing.
+  - `/history` — Menampilkan ringkasan riwayat percakapan sesi aktif.
+  - `/clear` — Mengosongkan riwayat memori sesi aktif dan memulai percakapan baru.
+- **Non-Intrusive**: Berjalan di atas callback hook `on_event` tanpa mengubah kontrak data statis `TurnResult` maupun `OrchestrationResult`.
+
+---
+
+## 10. Catatan Rilis & Ringkasan Pembaruan (v1.5.0 & v1.5.1)
+
+### Versi 1.5.1 (Patch Release)
+- **Sanitasi `NO_PROXY` / `no_proxy` untuk IPv6 Berkurung**:
+  - Mengatasi kegagalan fatal `httpx.InvalidURL: Invalid port: ':1]'` pada sandbox/lingkungan enterprise yang memuat entri seperti `[::1]` atau `[::1]:port`.
+  - Menghadirkan helper bersama `create_async_client` dan context manager non-destruktif `sanitized_proxy_env` di `gateway/adapter/base_adapter.py`.
+  - Memperbarui keempat adapter LLM (`custom_adapter`, `openai_compatible`, `anthropic_adapter`, `gemini_adapter`) untuk menggunakan konstruksi klien terpusat.
+  - Menjaga 100% kompatibilitas mundur dan integritas variabel lingkungan asli.
+
+### Versi 1.5.0 (Minor Release)
+- **Real-Time Event & Token Streaming**:
+  - Implementasi modul `LegionADK.core.stream_events` (`StreamEvent`, `StreamEventType`, `emit_stream_event`).
+  - Integrasi hook `on_event` pada `execute_turn`, `run_moa_debate`, `run_autonomous_triage`, dan `dispatch_envelope`.
+  - Ekstraksi blok penalaran `<think>...</think>` (model DeepSeek R1 / Reasoning) ke variabel penalaran khusus.
+- **Terminal Interaktif REPL CLI**:
+  - Menghadirkan antarmuka command-line interaktif `interactive_cli.py`.
+- **Model Context Protocol (MCP) Bridge**:
+  - Penambahan modul `LegionADK.tools.mcp_bridge` (`mount_mcp_server`, `unmount_mcp_tools`, `MCPMountReceipt`).
+- **Optimasi Konteks & UX Tool Memory**:
+  - Peningkatan kemudahan model pada `graph:locate` (penyertaan `section_id` lengkap) dan `graph:read_section` (toleran input `slug#section`).
+  - MoA Context Pruning & Truncation Guard untuk mencegah luapan token pada layer agregasi multi-agen.
+- **Dukungan Proxy Korporasi**:
+  - Adapter gateway menghormati variabel lingkungan proxy standar (`HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`).
+
