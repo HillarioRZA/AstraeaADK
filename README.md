@@ -1,206 +1,167 @@
-# Astraea ADK (LegionADK)
-### Enterprise-Grade Mixture-of-Agents (MoA) Orchestration & Autonomous Agent Development Kit
+# Astraea-ADK (`LegionADK`)
 
-[![PyPI version](https://img.shields.io/badge/pypi-v1.0.1-blue.svg)](https://pypi.org/project/astraea-adk/)
-[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
-[![Pydantic v2](https://img.shields.io/badge/pydantic-v2%20(frozen=True)-green.svg)](https://docs.pydantic.dev/)
-[![Binary Wheel](https://img.shields.io/badge/distribution-C--Extension%20Native%20Binary-darkviolet.svg)]()
-[![Architecture](https://img.shields.io/badge/architecture-Role--Agnostic%20MoA-orange.svg)]()
-[![Checkpoints](https://img.shields.io/badge/test%20suite-O1--O12%20PASS%20100%25-brightgreen.svg)]()
-[![API Documentation](https://img.shields.io/badge/docs-API%20Reference-informational.svg)](documentation.md)
-[![License](https://img.shields.io/badge/license-Proprietary%20%26%20Confidential-red.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
+[![Dependencies](https://img.shields.io/badge/dependencies-pydantic%20%2B%20httpx-success.svg)]()
+[![API Reference](https://img.shields.io/badge/docs-API%20Reference-blueviolet.svg)](documentation.md)
+[![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
 
-**Astraea ADK (`LegionADK`)** adalah framework dan runtime tingkat enterprise untuk perancangan, orkestrasi, tata kelola keamanan (*governance*), memori graf lokal (*local graph memory*), serta komunikasi sistem multi-agen berbasis **Mixture-of-Agents (MoA)**.
-
-Dirancang dari nol dengan fokus pada determinisme matematis, pencegahan balapan data (*race condition*), efisiensi biaya inferensi token LLM, dan keandalan tingkat produksi (*production-grade resilience*).
-
----
-
-## 📑 Daftar Isi
-
-- [🚀 Instalasi](#-instalasi)
-- [🏗 Arsitektur Sistem (Layer Breakdown)](#-arsitektur-sistem-layer-breakdown)
-- [✨ Fitur Utama (Core Highlights)](#-fitur-utama-core-highlights)
-- [📖 Dokumentasi Lengkap API (documentation.md)](documentation.md)
-- [💡 Panduan Penggunaan Cepat (Quickstart)](#-panduan-penggunaan-cepat-quickstart)
-  - [1. Cara 1: Diskusi Multi-Putaran Eksplisit (run_moa_debate)](#1-cara-1-diskusi-multi-putaran-eksplisit-run_moa_debate)
-  - [2. Cara 2: Triase Otonom & Pendelegasian Mandiri (run_autonomous_triage)](#2-cara-2-triase-otonom--pendelegasian-mandiri-run_autonomous_triage)
-  - [3. Tata Kelola Keamanan & Circuit Breaker (Governance)](#3-tata-kelola-keamanan--circuit-breaker-governance)
-- [📁 Folder Contoh (Examples)](#-folder-contoh-examples)
-- [🛡 Distribusi & Lisensi](#-distribusi--lisensi)
-
----
-
-## 🚀 Instalasi
-
-Astraea ADK didistribusikan secara resmi via PyPI dalam format **Protected Machine Binary Wheels** (C-Extension native `.pyd` untuk Windows dan `.so` untuk Linux & macOS) yang teroptimasi performa tinggi dan aman:
-
-```bash
-pip install astraea-adk
-```
-
-### Kebutuhan Sistem:
-* Python 3.10, 3.11, atau 3.12 (64-bit)
-* Sistem Operasi: Linux (x86_64), Windows (x86_64), atau macOS (x86_64 / Apple Silicon ARM64)
-* Kunci API LLM (OpenAI, Anthropic, Gemini, Groq, atau OpenRouter)
-
----
-
-## 🏗 Arsitektur Sistem (Layer Breakdown)
+**Astraea-ADK** (`LegionADK`) adalah runtime eksekusi agen tunggal dan multi-agen (*Mixture-of-Agents*) untuk Python. Inti framework ini dibangun hanya di atas pustaka standar Python, `pydantic>=2.0`, dan `httpx`—tanpa ketergantungan pada database vektor eksternal, server graf, maupun lapisan pembungkus (*wrapper*) prompt yang berat.
 
 ![Astraea ADK System Architecture](docs/assets/system_architecture.png)
 
-Astraea ADK dibangun dengan arsitektur 5-lapisan modular dengan batas tanggung jawab (*separation of concerns*) yang terisolasi ketat:
+---
 
-### 1. Protocol Layer (MoA Orchestration Engine)
-* **MoA Orchestration**: Mengelola eksekusi Mixture-of-Agents adaptif. Agen koordinator menganalisis persoalan secara mandiri, membagi peran, dan mendistribusikan tugas ke spesialis terkait.
-* **Multi-Agent Debate**: Memfasilitasi pertukaran ide, sintesis kompromi, dan evaluasi silang (*cross-critique*) multi-putaran antar-spesialis sebelum draf akhir disatukan kembali oleh peran agregator.
-* **Strict Chain-of-Command**: Mengatur hierarki delegasi berjenjang (atasan ke bawahan) dengan batas kedalaman eksekusi terkontrol, pelacakan tumpukan panggilan (*call stack tracking*), serta pencegahan siklus delegasi (*anti-cycle protection*).
+## Masalah Teknis yang Diselesaikan
 
-### 2. Runtime Layer (10-Phase Agent Turn Engine)
-* **10-Phase Turn Pipeline**: Menjalankan setiap interaksi giliran agen melalui tahapan deterministik—mulai dari audit tata kelola awal (*preflight*), perakitan prompt dinamis, pemanggilan model terawasi (*watchdog invocation*), eksekusi aksi, evaluasi keamanan pasca-eksekusi, hingga finalisasi status.
-* **Context Compaction & Token Budgeting**: Pengelolaan kuota token proaktif dengan strategi reduksi riwayat dua tingkat (*summarization & eviction*), menjaga relevansi konteks percakapan panjang tanpa melampaui jendela konteks model.
-* **Immutable State Transitions**: Menjamin seluruh manipulasi status percakapan bersifat beku (*immutable frozen state*), mencegah mutasi data yang tidak terduga antar-giliran.
+Framework agen umumnya bermasalah ketika dibawa ke beban kerja nyata karena empat hal:
 
-### 3. Gateway Layer (Resilient I/O & Routing)
-* **Model Router & Load Balancer**: Manajemen lalu lintas inferensi multi-penyedia dengan isolasi kuota RPM/TPM, *failover cascade* otomatis, dan pemulihan mandiri (*auto-cooldown*) saat terjadi batasan laju (*rate-limiting*).
-* **Byte-Stable Cache Boundary**: Segmentasi prompt statis dan dinamis dengan verifikasi hash deterministik untuk memastikan efisiensi biaya tertinggi dan retensi *prompt caching* penyedia LLM (>90% Cache HIT).
-* **Self-Healing Tool Repair**: Mekanisme penanganan anomali otomatis yang mampu memperbaiki payload JSON yang terpotong atau mengalami inkonsistensi sintaks sebelum diproses lebih lanjut.
-
-### 4. Governance Layer (Security & Guardrails)
-* **Deterministic Verifier**: Validasi parametrik ketat terhadap seluruh aksi agen sebelum dieksekusi, mencegah manipulasi batas direktori kerja (*path traversal*) dan akses file ilegal.
-* **Smart Guardian**: Mesin audit perilaku agen secara *real-time* untuk mengevaluasi risiko eksekusi kode berbahaya, manipulasi instruksi (*prompt injection*), dan pola loop anomali.
-* **Circuit Breaker**: Pemutus otomatis akses tool eksternal saat terjadi kegagalan beruntun guna mencegah pembengkakan biaya dan kehabisan kuota API.
-
-### 5. Memory Layer (Dual-Layer Persistent Graph Memory)
-* **Local Graph Memory Engine**: Penyimpanan relasional lokal bebas ketergantungan database eksternal berbasis Obsidian-compatible markdown vault dan indeks graf atomic.
-* **Bidirectional Relationship Index**: Pencarian asosiatif multivariat dengan traversal kedalaman kustom untuk menyajikan konteks memori yang tajam dan relevan.
-* **Atomic File Locking**: Penguncian berkas konkurensi tingkat proses untuk menjamin integritas data memori pada pemanggilan paralel multi-agen.
+1. **Invalidasi Prompt Cache Antar-Turn**: Menyisipkan konteks dinamis di tempat yang salah atau urutan deklarasi *tool* yang berubah-ubah membuat *prefix cache* pada penyedia LLM selalu meleset (*cache miss*).
+2. **Konteks Membengkak karena Output Tool & RAG**: Membuang seluruh isi dokumen *skill* ke *system prompt* atau membiarkan satu panggilan *tool* mengembalikan ratusan kilobyte teks mentah langsung ke riwayat pesan.
+3. **Biaya & Latensi Ekstraksi Memori**: Menggunakan panggilan LLM tambahan hanya untuk mengekstrak *entity/triple* pengetahuan atau meminta LLM mengulang panggilan ketika JSON `tool_calls` terpotong batas `max_tokens`.
+4. **Konflik Tulis pada Agen Paralel**: Beberapa agen yang dieksekusi bersamaan melalui `asyncio.gather` memodifikasi state atau berkas yang sama tanpa penguncian (*locking*) dan tanpa kontrol konkurensi.
 
 ---
 
-## 💡 Panduan Penggunaan Cepat (Quickstart)
+## Arsitektur & Mekanisme Internal
 
-### 1. Cara 1: Diskusi Multi-Putaran Eksplisit (`run_moa_debate`)
-
-Dua atau lebih agen spesialis berdiskusi mencari kompromi terbaik, disintesis oleh agregator:
-
-```python
-import asyncio
-from LegionADK import (
-    LLMSpec,
-    AgentRoster,
-    OrchestrationPolicy,
-    contract_message,
-    run_moa_debate,
-)
-
-async def main():
-    model_cfg = {"provider": "openrouter", "model": "google/gemini-2.0-flash-001"}
-
-    # 1. Definisikan Spesifikasi Agen
-    spec_cto = LLMSpec(handle="@cto", agent_name="CTO", model_settings=model_cfg)
-    spec_pm = LLMSpec(handle="@pm", agent_name="PM", model_settings=model_cfg)
-    spec_supervisor = LLMSpec(handle="@supervisor", agent_name="Supervisor", model_settings=model_cfg)
-
-    roster = AgentRoster([spec_cto, spec_pm, spec_supervisor])
-
-    # 2. Siapkan Amplop Pesan & Kebijakan
-    envelope = contract_message(
-        sender="@user",
-        target=["@cto", "@pm"],
-        content="Bagaimana strategi migrasi basis data core banking tanpa downtime?",
-    )
-
-    # 3. Jalankan MoA Debate (2 Putaran + 1 Sintesis)
-    result = await run_moa_debate(
-        envelope=envelope,
-        roster=roster,
-        proposer_handles=["@cto", "@pm"],
-        aggregator_handle="@supervisor",
-        policy=OrchestrationPolicy(max_discussion_rounds=2),
-    )
-
-    print("Hasil Sintesis:", result.final_text)
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
+| Modul | Mekanisme Teknis |
+| :--- | :--- |
+| **`core/`** | Kontrak identitas `LLMSpec`, amplop komunikasi `MessageEnvelope`, dan `CancellationToken` (mendukung `pause()`/`resume()` terpisah dari `cancel()`). Seluruh struktur bersarang dikunci *immutable* menggunakan `MappingProxyType`. |
+| **`gateway/`** | Memisahkan identitas statis dan konteks giliran dengan penanda `LEGION_CACHE_BOUNDARY` (diverifikasi via SHA-256), mengekspor skema *tool* secara terurut alfabetis, menangani *rate-limit* RPM/TPM beserta *cooldown failover* per provider, dan menambal JSON `tool_calls` yang terpotong dengan parser *stack LIFO* di RAM. |
+| **`tools/`** | Registri *tool* in-memory dengan otorisasi RBAC (`exact`, `namespace:*`, `*` / `ALL`) dan **50 KB Output Spill Guard** (`51.200 bytes`) yang memotong luapan teks secara aman pada batas karakter UTF-8 multi-byte serta menyimpan output utuh ke disk. |
+| **`governance/`** | `DeterministicVerifier` (CoV) memeriksa argumen *tool* berisiko (`risk_tier >= 1`) terhadap *path traversal* dan injeksi perintah sebelum dieksekusi, lalu mengembalikan pesan penolakan ke riwayat `role: "tool"` agar model melakukan *self-repair*. Dilengkapi `ToolCircuitBreaker` (berbasis hash tanda tangan panggilan) dan eskalasi sesi monoton via `SmartGuardian`. |
+| **`runtime/`** | Siklus eksekusi 10 fase *stateless* (`execute_turn`) dengan kompresi konteks dua lapis di RAM (`compact_context_two_tier`): memangkas output *tool* lama menjadi ringkasan 1 baris (Tier 1) dan menggulung separuh riwayat terlama menjadi blok ringkasan (Tier 2) tanpa menyentuh jangkar *system prompt*. |
+| **`memory/`** | **Autonomous Graph Memory** di atas folder berkas Markdown (`.md`). Memindai *frontmatter*, heading, dan `[[wikilink]]` dalam mode biner (`rb`), mencatat `(start_byte, end_byte)` setiap sub-bab, serta menyajikan pengetahuan dalam 3 langkah: pencarian pintu masuk dengan **Okapi BM25** (`graph:locate`), pembacaan struktur sub-bab di RAM (`graph:inspect_outline`), dan pembacaan irisan byte sub-bab via `seek()` (`graph:read_section`). |
+| **`protocol/`** | Orkestrator multi-agen yang mendukung debat paralel (`run_moa_debate`), triase mandiri oleh koordinator (`run_autonomous_triage`), serta delegasi hierarkis berjenjang (*Strict Chain-of-Command*) dengan proteksi siklus tumpukan panggilan (*anti-cycle call stack guard*) dan pemblokiran *tool* mutasi (`risk_tier >= 1`) selama fase *brainstorming* paralel. |
 
 ---
 
-### 2. Cara 2: Triase Otonom & Pendelegasian Mandiri (`run_autonomous_triage`)
+## Instalasi & Konfigurasi
 
-Agen Chief of Staff (`@cos`) secara mandiri memeriksa direktori agen, memilih siapa yang perlu diajak berkolaborasi, dan merumuskan keputusan akhir:
+Instal paket distribusi biner menggunakan `pip`:
 
-```python
+```bash
+pip install astraea-adk
+
+
+Salin berkas konfigurasi contoh examples/.env.example menjadi .env di direktori kerja Anda:
+CUSTOM_PROVIDER_API_KEY=your_api_key_here
+CUSTOM_PROVIDER_BASE_URL=[https://api.your-provider.com/v1](https://api.your-provider.com/v1)
+
+TEST_PRIMARY_PROVIDER=custom
+TEST_PRIMARY_MODEL=deepseek-v4.1-flash
+
+# Opsional — Provider Resmi & Lokal:
+# OPENAI_API_KEY=sk-...
+# ANTHROPIC_API_KEY=sk-ant-...
+# GEMINI_API_KEY=AIzaSy...
+# OLLAMA_BASE_URL=http://localhost:11434/v1
+# VLLM_BASE_URL=http://localhost:8000/v1
+
+
+Contoh Penggunaan Cepat
+1. Orkestrasi Multi-Agen & Strict Chain-of-Command (LegionADK.protocol)
+Fungsi dispatch_envelope menganalisis target amplop dan memilih jalur eksekusi secara otomatis:
+Triase Otonom (AUTONOMOUS_TRIAGE): Jika pesan dikirim ke satu koordinator (misal @cos atau @secretary), koordinator mengevaluasi direktori tim dan mendelegasikan tugas ke spesialis yang relevan.
+Debat Eksplisit (EXPLICIT_MOA): Jika pesan ditujukan ke \ge 2 agen atau menyebut beberapa @handle, para Proposer berjalan paralel lalu disintesis oleh @Aggregator.
+Agen Tunggal (STANDALONE): Jika pesan ditujukan ke satu agen biasa tanpa delegasi.
 import asyncio
 from LegionADK import (
-    LLMSpec,
     AgentRoster,
+    LLMSpec,
     OrchestrationPolicy,
     contract_message,
-    run_autonomous_triage,
+    dispatch_envelope,
 )
 
-async def main():
-    model_cfg = {"provider": "openrouter", "model": "google/gemini-2.0-flash-001"}
+roster = AgentRoster([
+    LLMSpec(
+        handle="@cos",
+        agent_name="Chief of Staff",
+        soul_prompt="Koordinator yang memetakan masalah ke kepala divisi terkait.",
+        system_prompt="Gunakan comm:delegate untuk menugaskan analisis teknis ke @cto dan produk ke @pm.",
+        tool_permissions=["comm:delegate"],
+    ),
+    LLMSpec(
+        handle="@cto",
+        agent_name="Chief Technology Officer",
+        soul_prompt="Fokus pada keandalan sistem, isolasi proses, dan struktur data.",
+        system_prompt="Berikan spesifikasi teknis yang terukur.",
+        tool_permissions=["comm:delegate"],
+    ),
+    LLMSpec(
+        handle="@pm",
+        agent_name="Product Manager",
+        soul_prompt="Fokus pada jadwal rilis, ruang lingkup fitur, dan mitigasi risiko bisnis.",
+        system_prompt="Berikan batasan rilis dan prioritas eksekusi.",
+    ),
+])
 
-    spec_cos = LLMSpec(handle="@cos", agent_name="Chief of Staff", model_settings=model_cfg)
-    spec_sec = LLMSpec(handle="@security", agent_name="Security Head", model_settings=model_cfg)
-    spec_fin = LLMSpec(handle="@finance", agent_name="CFO", model_settings=model_cfg)
-
-    roster = AgentRoster([spec_cos, spec_sec, spec_fin])
-
-    envelope = contract_message(
+async def main() -> None:
+    env = contract_message(
         sender="@user",
         target=["@cos"],
-        content="Kami ingin meluncurkan fitur AI payment di aplikasi mobile perbankan.",
+        content="Rancang rencana mitigasi lonjakan beban API 300% tanpa menurunkan kualitas respons.",
     )
 
-    result = await run_autonomous_triage(
-        envelope=envelope,
+    result = await dispatch_envelope(
+        envelope=env,
         roster=roster,
-        coordinator_handle="@cos",
-        policy=OrchestrationPolicy(max_discussion_rounds=1),
+        policy=OrchestrationPolicy(
+            max_discussion_rounds=1,
+            max_delegation_depth=3,
+            allow_proposer_tier1_mutations=False,
+        ),
     )
 
-    print("Keputusan Eksekutif:", result.final_text)
+    print(f"Mode & Status : {result.mode} | {result.status}")
+    print(f"Proposers     : {list(result.proposer_handles)}")
+    print(f"Token Usage   : prompt={result.total_prompt_tokens}, cached={result.total_cached_tokens}")
+    print(result.final_content)
 
-if __name__ == "__main__":
-    asyncio.run(main())
-```
+asyncio.run(main())
 
----
 
-### 3. Tata Kelola Keamanan & Circuit Breaker (Governance)
+2. Autonomous Graph Memory (LegionADK.memory)
+Mendaftarkan 4 tool navigasi dan penulisan pengetahuan di atas folder Markdown lokal (kompatibel dengan vault Obsidian maupun berkas SKILL.md open-source):
+from pathlib import Path
+from LegionADK import register_graph_memory_tools
 
-```python
-from LegionADK import DeterministicVerifier, ToolCircuitBreaker
+# Mendaftarkan:
+# 1. graph:locate (tier 0 - pencarian Okapi BM25 + peta tetangga 1-hop EXTRACTED > INFERRED)
+# 2. graph:inspect_outline (tier 0 - daftar sub-bab, estimasi token, & content_hash di RAM)
+# 3. graph:read_section (tier 0 - baca irisan byte sub-bab via seek() + 50KB spill guard)
+# 4. graph:learn_and_link (tier 1 - tulis/append/replace atomik dengan OCC hash & Jaccard check)
+memory = register_graph_memory_tools(
+    vault_path=Path("./vault"),
+    skill_gate=lambda session_id: True,
+    max_mutations_per_session=5,
+)
 
-# 1. Deterministic Sandbox Guardrail (Anti-Path Traversal)
-verifier = DeterministicVerifier(allowed_root="./safe_workspace")
-is_valid, clean_path = await verifier.verify("read_file", {"path": "./safe_workspace/data.csv"})
+health = memory.check_health()
+print(f"Nodes: {health.total_nodes}, Edges: {health.total_edges}, Orphans: {health.orphan_nodes}")
 
-# 2. Tool Circuit Breaker (Anti-Runaway Loops)
-breaker = ToolCircuitBreaker(threshold=3, reset_timeout=60.0)
-breaker.record_attempt("external_api")
-```
 
----
+Menjalankan Skrip Contoh (examples/)
+Repositori ini menyertakan 4 skrip contoh siap pakai di dalam direktori examples/:
+Berkas
+Deskripsi
+examples/01_quickstart_moa_debate.py
+Diskusi eksplisit multi-putaran antar-spesialis (run_moa_debate) yang disintesis oleh agregator.
+examples/02_autonomous_triage.py
+Triase mandiri oleh koordinator (run_autonomous_triage) dan pendelegasian berjenjang (Strict Chain-of-Command).
+examples/03_secure_governance.py
+Demonstrasi RBAC, penolakan path traversal oleh DeterministicVerifier (CoV), self-repair agen, dan eskalasi SmartGuardian.
+examples/04_graph_memory.py
+Penelusuran bertahap 3-lapis pada MarkdownGraphMemory dan penulisan pengetahuan baru secara atomik.
 
-## 📁 Folder Contoh (Examples)
+Jalankan contoh langsung dari terminal:
+python examples/01_quickstart_moa_debate.py
+python examples/02_autonomous_triage.py
+python examples/03_secure_governance.py
+python examples/04_graph_memory.py
 
-Kunjungi folder [`examples/`](examples/) untuk melihat implementasi skrip demonstrasi mandiri:
-* [`examples/01_quickstart_moa_debate.py`](examples/01_quickstart_moa_debate.py) - Implementasi multi-round debate antar 2 agen spesialis & 1 arbiter.
-* [`examples/02_autonomous_triage.py`](examples/02_autonomous_triage.py) - Triase dinamis berbasis tool pemanggilan delegasi `@cos`.
-* [`examples/03_secure_governance.py`](examples/03_secure_governance.py) - Pembuktian pertahanan sandbox dan circuit breaker.
-* [`examples/04_graph_memory.py`](examples/04_graph_memory.py) - Mesin memori graf lokal persisten (Obsidian-compatible vault, BM25 progressive disclosure, & relasi wikilink dua-arah).
 
----
-
-## 🛡 Distribusi & Lisensi
-
-Astraea ADK dilindungi oleh lisensi kepemilikan tertutup (*Proprietary and Confidential*). 
-Seluruh komponen komputasi runtime didistribusikan dalam format binary mesin C terproteksi. 
-Lihat berkas [LICENSE](LICENSE) untuk ketentuan hak cipta dan penggunaan.
+Referensi lengkap seluruh kelas kontrak, tanda tangan fungsi, dan parameter tersedia di documentation.md.
+Lisensi
+Proyek ini dilindungi di bawah lisensi Proprietary & Confidential. Hak Cipta © Hillario RZA.
