@@ -78,8 +78,6 @@ Klaim efisiensi dan ketahanan di atas diukur dengan suite benchmark internal yan
 
 Mode eksekusi pada B4 bukan setting statis, melainkan hasil keputusan model pada giliran pertama koordinator `@cos`. Soal, roster, dan tool identik di kedua run; yang berbeda hanya strategi yang dipilih model saat runtime. Jika koordinator mengeluarkan `comm:delegate`, orkestrasi berjalan sebagai **AUTONOMOUS_TRIAGE**: para spesialis bekerja paralel dari sudut pandangnya masing-masing dan koordinator menyintesis hasilnya, dengan konsekuensi putaran LLM, token, dan waktu yang lebih besar namun dengan pembagian kerja dan sintesis lintas peran. Jika koordinator menilai soal cukup diselesaikan sendiri (ia juga memegang izin tool telemetri), giliran selesai sebagai **STANDALONE**: satu agen, satu pemanggilan tool, jawaban langsung, jauh lebih hemat token dan waktu. Keduanya menghasilkan angka akhir yang sama dan benar (biaya tanpa cache $6.000/hari, dengan 90% cache hit $1.140/hari, penghematan $4.860/hari). Engine tidak memaksa satu jalur; ia mengikuti strategi yang dipilih model, dan perilaku ini dapat diarahkan lewat system prompt koordinator atau `OrchestrationPolicy` bila pengguna menginginkan delegasi selalu atau penyelesaian mandiri selalu.
 
-> Catatan metodologi: angka latensi Pilar A di atas diukur pada VM bersama (shared CPU) dan akan lebih cepat pada hardware lokal atau server khusus. Seluruh skenario dapat direproduksi dengan `python test/benchmark_suite.py`, dan mode live B4 dengan `LEGION_LIVE_BENCH=1 python test/benchmark_suite.py`.
-
 ---
 
 ## Pembaruan 1.5.1: Benchmark Dataset Asli
