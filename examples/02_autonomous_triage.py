@@ -1,6 +1,6 @@
 """
 Contoh 2: Autonomous Triage & Self-Delegation
-Menggunakan Astraea ADK (LegionADK)
+Menggunakan Astraea ADK (AstraeaADK)
 
 Skenario:
 Agen koordinator / Chief of Staff (@cos) menerima masalah bisnis yang kompleks.
@@ -11,7 +11,7 @@ memanggil spesialis yang relevan via tool delegasi, dan menyintesis hasil akhirn
 import asyncio
 import os
 from pathlib import Path
-from LegionADK import (
+from AstraeaADK import (
     LLMSpec,
     AgentRoster,
     OrchestrationPolicy,

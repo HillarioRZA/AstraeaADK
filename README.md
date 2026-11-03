@@ -1,11 +1,13 @@
-# Astraea-ADK (`LegionADK`)
+# Astraea-ADK (`AstraeaADK`)
 
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![Dependencies](https://img.shields.io/badge/dependencies-pydantic%20%2B%20httpx-success.svg)]()
 [![API Reference](https://img.shields.io/badge/docs-API%20Reference-blueviolet.svg)](documentation.md)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
 
-**Astraea-ADK** (`LegionADK`) adalah runtime eksekusi agen tunggal dan multi-agen (*Mixture-of-Agents*) untuk Python. Inti framework ini dibangun hanya di atas pustaka standar Python, `pydantic>=2.0`, dan `httpx` — tanpa ketergantungan pada database vektor eksternal, server graf, maupun lapisan pembungkus (*wrapper*) prompt yang berat.
+**Astraea-ADK** (`AstraeaADK`) adalah runtime eksekusi agen tunggal dan multi-agen (*Mixture-of-Agents*) untuk Python. Inti framework ini dibangun hanya di atas pustaka standar Python, `pydantic>=2.0`, dan `httpx` — tanpa ketergantungan pada database vektor eksternal, server graf, maupun lapisan pembungkus (*wrapper*) prompt yang berat.
+
+> **Baru di 1.5.2:** nama paket impor berganti dari `LegionADK` menjadi `AstraeaADK` (hard rename, tanpa alias). Ganti seluruh impor Anda menjadi `import AstraeaADK`. Nama distribusi PyPI tetap `astraea-adk` dan seluruh API tidak berubah. Rincian ada di [documentation.md](documentation.md) bagian Catatan Rilis.
 
 ![Astraea ADK System Architecture](docs/assets/system_architecture.png)
 
@@ -125,7 +127,7 @@ TEST_PRIMARY_MODEL=deepseek-v4.1-flash
 
 ## Contoh Penggunaan Cepat
 
-### 1. Orkestrasi Multi-Agen & Strict Chain-of-Command (`LegionADK.protocol`)
+### 1. Orkestrasi Multi-Agen & Strict Chain-of-Command (`AstraeaADK.protocol`)
 
 Fungsi `dispatch_envelope` menganalisis target amplop dan memilih jalur eksekusi secara otomatis:
 
@@ -135,7 +137,7 @@ Fungsi `dispatch_envelope` menganalisis target amplop dan memilih jalur eksekusi
 
 ```python
 import asyncio
-from LegionADK import (
+from AstraeaADK import (
     AgentRoster,
     LLMSpec,
     OrchestrationPolicy,
@@ -191,13 +193,13 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-### 2. Autonomous Graph Memory (`LegionADK.memory`)
+### 2. Autonomous Graph Memory (`AstraeaADK.memory`)
 
 Mendaftarkan 4 tool navigasi dan penulisan pengetahuan di atas folder Markdown lokal (kompatibel dengan vault Obsidian maupun berkas `SKILL.md` open-source):
 
 ```python
 from pathlib import Path
-from LegionADK import register_graph_memory_tools
+from AstraeaADK import register_graph_memory_tools
 
 # Mendaftarkan:
 # 1. graph:locate (tier 0 - pencarian Okapi BM25 + peta tetangga 1-hop EXTRACTED > INFERRED)

@@ -1,6 +1,6 @@
 """
 Contoh 4: Local Knowledge Graph Memory
-Menggunakan Astraea ADK (LegionADK)
+Menggunakan Astraea ADK (AstraeaADK)
 
 Skenario:
 Astraea ADK menyediakan mesin memori graf lokal persisten berformat Obsidian-compatible markdown vault:
@@ -12,7 +12,7 @@ Astraea ADK menyediakan mesin memori graf lokal persisten berformat Obsidian-com
 
 import asyncio
 from pathlib import Path
-from LegionADK import (
+from AstraeaADK import (
     GraphIndexer,
     GraphMutator,
     GraphNavigator,

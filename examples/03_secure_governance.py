@@ -1,6 +1,6 @@
 """
 Contoh 3: Enterprise Security & Governance Guardrails
-Menggunakan Astraea ADK (LegionADK)
+Menggunakan Astraea ADK (AstraeaADK)
 
 Skenario:
 Menunjukkan sistem pertahanan berlapis (defense-in-depth) Astraea ADK:
@@ -9,7 +9,7 @@ Menunjukkan sistem pertahanan berlapis (defense-in-depth) Astraea ADK:
 """
 
 import asyncio
-from LegionADK import (
+from AstraeaADK import (
     DeterministicVerifier,
     ToolCircuitBreaker,
     CircuitBreakerOpenError,

@@ -1,30 +1,30 @@
-# Astraea-ADK (`LegionADK`) — Referensi Lengkap API & Kontrak Data
+# Astraea-ADK (`AstraeaADK`) — Referensi Lengkap API & Kontrak Data
 
-Dokumen ini memuat spesifikasi teknis untuk seluruh kelas kontrak (*Pydantic v2 frozen models*), fungsi orkestrasi, mesin *turn runtime*, tata kelola keamanan, dan *graph memory* yang diekspor oleh paket `LegionADK`.
+Dokumen ini memuat spesifikasi teknis untuk seluruh kelas kontrak (*Pydantic v2 frozen models*), fungsi orkestrasi, mesin *turn runtime*, tata kelola keamanan, dan *graph memory* yang diekspor oleh paket `AstraeaADK`.
 
 ---
 
 ## Daftar Isi
 
-1. [Ekspor Tingkat Atas (`import LegionADK`)](#1-ekspor-tingkat-atas-import-legionadk)
-2. [Core Subsystem (`LegionADK.core`)](#2-core-subsystem-legionadkcore)
-3. [Gateway & Routing Subsystem (`LegionADK.gateway`)](#3-gateway--routing-subsystem-legionadkgateway)
-4. [Tools & RBAC Subsystem (`LegionADK.tools`)](#4-tools--rbac-subsystem-legionadktools)
-5. [Governance & Security Subsystem (`LegionADK.governance`)](#5-governance--security-subsystem-legionadkgovernance)
-6. [Runtime Turn Engine (`LegionADK.runtime`)](#6-runtime-turn-engine-legionadkruntime)
-7. [Autonomous Graph Memory (`LegionADK.memory`)](#7-autonomous-graph-memory-legionadkmemory)
-8. [Protocol & MoA Orchestrator (`LegionADK.protocol`)](#8-protocol--moa-orchestrator-legionadkprotocol)
-9. [Terminal Interaktif REPL CLI (`LegionADK.interactive_cli`)](#9-terminal-interaktif-repl-cli-legionadkinteractive_cli)
-10. [Catatan Rilis & Ringkasan Pembaruan (v1.5.0 & v1.5.1)](#10-catatan-rilis--ringkasan-pembaruan-v150--v151)
+1. [Ekspor Tingkat Atas (`import AstraeaADK`)](#1-ekspor-tingkat-atas-import-astraeaadk)
+2. [Core Subsystem (`AstraeaADK.core`)](#2-core-subsystem-astraeaadkcore)
+3. [Gateway & Routing Subsystem (`AstraeaADK.gateway`)](#3-gateway--routing-subsystem-astraeaadkgateway)
+4. [Tools & RBAC Subsystem (`AstraeaADK.tools`)](#4-tools--rbac-subsystem-astraeaadktools)
+5. [Governance & Security Subsystem (`AstraeaADK.governance`)](#5-governance--security-subsystem-astraeaadkgovernance)
+6. [Runtime Turn Engine (`AstraeaADK.runtime`)](#6-runtime-turn-engine-astraeaadkruntime)
+7. [Autonomous Graph Memory (`AstraeaADK.memory`)](#7-autonomous-graph-memory-astraeaadkmemory)
+8. [Protocol & MoA Orchestrator (`AstraeaADK.protocol`)](#8-protocol--moa-orchestrator-astraeaadkprotocol)
+9. [Terminal Interaktif REPL CLI (`AstraeaADK.interactive_cli`)](#9-terminal-interaktif-repl-cli-astraeaadkinteractive_cli)
+10. [Catatan Rilis & Ringkasan Pembaruan (v1.5.0, v1.5.1 & v1.5.2)](#10-catatan-rilis--ringkasan-pembaruan-v150-v151--v152)
 
 ---
 
-## 1. Ekspor Tingkat Atas (`import LegionADK`)
+## 1. Ekspor Tingkat Atas (`import AstraeaADK`)
 
-Seluruh simbol utama dapat diimpor langsung dari akar paket `LegionADK`:
+Seluruh simbol utama dapat diimpor langsung dari akar paket `AstraeaADK`:
 
 ```python
-from LegionADK import (
+from AstraeaADK import (
     # Core & Event Streaming
     LLMSpec, MessageEnvelope, CancellationToken, MoAMetadata, contract_message,
     StreamEvent, StreamEventType, emit_stream_event,
@@ -56,14 +56,14 @@ from LegionADK import (
 
 ---
 
-## 2. Core Subsystem (`LegionADK.core`)
+## 2. Core Subsystem (`AstraeaADK.core`)
 
 ### 2.1 `LLMSpec`
 
 Kontrak identitas, instruksi statis, izin tool, dan konfigurasi model untuk satu peran agen (`ConfigDict(extra="forbid", frozen=True)`).
 
 ```python
-from LegionADK.core.llm_spec import LLMSpec
+from AstraeaADK.core.llm_spec import LLMSpec
 ```
 
 Atribut:
@@ -145,7 +145,7 @@ Metode & properti:
 Mendukung penerusan token, jejak penalaran (*thinking process*), dan peristiwa eksekusi alat secara *real-time* ke antarmuka terminal/UI tanpa merusak kontrak data statis `TurnResult` dan `OrchestrationResult`.
 
 ```python
-from LegionADK.core.stream_events import (
+from AstraeaADK.core.stream_events import (
     StreamEvent,
     StreamEventType,
     emit_stream_event,
@@ -165,7 +165,7 @@ Fungsi `dispatch_envelope`, `execute_turn`, `run_moa_debate`, dan `run_autonomou
 
 ---
 
-## 3. Gateway & Routing Subsystem (`LegionADK.gateway`)
+## 3. Gateway & Routing Subsystem (`AstraeaADK.gateway`)
 
 ### 3.1 `cache_boundary.py`
 
@@ -213,7 +213,7 @@ repair_malformed_tool_call(tool_calls: List[Dict[str, Any]]) -> List[Dict[str, A
 Memastikan seluruh panggilan HTTP adapter gateway (Custom REST, OpenAI-Compatible, Anthropic, Gemini) menghormati konfigurasi proxy perusahaan standar (`HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`, dan `no_proxy`) tanpa mengalami kegagalan fatal pada environment yang mendefinisikan alamat IPv6 berkurung seperti `[::1]`.
 
 ```python
-from LegionADK.gateway.adapter.base_adapter import (
+from AstraeaADK.gateway.adapter.base_adapter import (
     create_async_client,
     sanitized_proxy_env,
     _normalize_no_proxy,
@@ -230,7 +230,7 @@ from LegionADK.gateway.adapter.base_adapter import (
 
 ---
 
-## 4. Tools & RBAC Subsystem (`LegionADK.tools`)
+## 4. Tools & RBAC Subsystem (`AstraeaADK.tools`)
 
 ### 4.1 `ToolSpec` & Fungsi Registri (`permission_registry.py`)
 
@@ -270,7 +270,7 @@ Menjaga agar keluaran tool tidak pernah melebihi batas keras 51.200 bytes (50 KB
 Menjembatani ekosistem perkakas berbasis standar **Anthropic Model Context Protocol (MCP)** melalui protokol standar input/output (stdio JSON-RPC 2.0). Seluruh perkakas yang diekspos oleh server MCP otomatis dikonversi menjadi `ToolSpec` native Astraea ADK dan dapat diatur hak aksesnya dengan RBAC.
 
 ```python
-from LegionADK.tools import mount_mcp_server, unmount_mcp_tools, MCPMountReceipt
+from AstraeaADK.tools import mount_mcp_server, unmount_mcp_tools, MCPMountReceipt
 ```
 
 Fungsi utama:
@@ -279,7 +279,7 @@ Fungsi utama:
 
 ---
 
-## 5. Governance & Security Subsystem (`LegionADK.governance`)
+## 5. Governance & Security Subsystem (`AstraeaADK.governance`)
 
 ### 5.1 `DeterministicVerifier` (`cov_verifier.py`)
 
@@ -325,7 +325,7 @@ guardian.session_journal(session_id: str) -> Tuple[GovernanceEvent, ...]
 
 ---
 
-## 6. Runtime Turn Engine (`LegionADK.runtime`)
+## 6. Runtime Turn Engine (`AstraeaADK.runtime`)
 
 ### 6.1 Kontrak State & Kebijakan (`turn_state.py`)
 
@@ -397,7 +397,7 @@ check_turn_loop_circuit_breaker(consecutive_empty_turns: int, max_allowed: int =
 
 ---
 
-## 7. Autonomous Graph Memory (`LegionADK.memory`)
+## 7. Autonomous Graph Memory (`AstraeaADK.memory`)
 
 ### 7.1 Model Kontrak Memori (`graph_models.py`)
 
@@ -443,7 +443,7 @@ async with lock_mgr.acquire(file_path): ...  # Mengunci path kanonis (os.path.no
 
 ---
 
-## 8. Protocol & MoA Orchestrator (`LegionADK.protocol`)
+## 8. Protocol & MoA Orchestrator (`AstraeaADK.protocol`)
 
 ### 8.1 Kontrak Orkestrasi (`moa_models.py`)
 
@@ -565,13 +565,13 @@ async def run_autonomous_triage(
 
 ---
 
-## 9. Terminal Interaktif REPL CLI (`LegionADK.interactive_cli`)
+## 9. Terminal Interaktif REPL CLI (`AstraeaADK.interactive_cli`)
 
 Modul antarmuka terminal mandiri berbasis Read-Eval-Print Loop (REPL) yang memungkinkan pengguna berinteraksi langsung dengan orkestrator tim multi-agen secara interaktif dengan visualisasi streaming token dan proses penalaran (*thinking*) secara *real-time*.
 
 ```bash
 # Menjalankan antarmuka terminal interaktif Astraea ADK
-python -m LegionADK.interactive_cli
+python -m AstraeaADK.interactive_cli
 ```
 
 Fitur utama:
@@ -585,7 +585,13 @@ Fitur utama:
 
 ---
 
-## 10. Catatan Rilis & Ringkasan Pembaruan (v1.5.0 & v1.5.1)
+## 10. Catatan Rilis & Ringkasan Pembaruan (v1.5.0, v1.5.1 & v1.5.2)
+
+### Versi 1.5.2 (Patch Release)
+- **Hard Rename Nama Paket Impor `LegionADK` → `AstraeaADK`**:
+  - Nama paket impor kini selaras dengan nama distribusi dan nama proyek: `import AstraeaADK` / `from AstraeaADK import ...`.
+  - **Perubahan yang merusak (breaking change)**: nama lama tidak dipertahankan sebagai alias, sehingga `import LegionADK` akan gagal dengan `ModuleNotFoundError`. Migrasi cukup dilakukan dengan mengganti nama paket pada seluruh pernyataan impor.
+  - Yang tidak berubah: nama distribusi PyPI tetap `astraea-adk`, seluruh API publik, perilaku runtime, dan format data identik dengan 1.5.1. Token `LEGION_*` (penanda `LEGION_CACHE_BOUNDARY` dan variabel lingkungan berawalan `LEGION_`) sengaja dipertahankan agar prompt cache dan konfigurasi yang sudah berjalan tidak terinvalidasi.
 
 ### Versi 1.5.1 (Patch Release)
 - **Sanitasi `NO_PROXY` / `no_proxy` untuk IPv6 Berkurung**:
@@ -596,13 +602,13 @@ Fitur utama:
 
 ### Versi 1.5.0 (Minor Release)
 - **Real-Time Event & Token Streaming**:
-  - Implementasi modul `LegionADK.core.stream_events` (`StreamEvent`, `StreamEventType`, `emit_stream_event`).
+  - Implementasi modul `AstraeaADK.core.stream_events` (`StreamEvent`, `StreamEventType`, `emit_stream_event`).
   - Integrasi hook `on_event` pada `execute_turn`, `run_moa_debate`, `run_autonomous_triage`, dan `dispatch_envelope`.
   - Ekstraksi blok penalaran `<think>...</think>` (model DeepSeek R1 / Reasoning) ke variabel penalaran khusus.
 - **Terminal Interaktif REPL CLI**:
   - Menghadirkan antarmuka command-line interaktif `interactive_cli.py`.
 - **Model Context Protocol (MCP) Bridge**:
-  - Penambahan modul `LegionADK.tools.mcp_bridge` (`mount_mcp_server`, `unmount_mcp_tools`, `MCPMountReceipt`).
+  - Penambahan modul `AstraeaADK.tools.mcp_bridge` (`mount_mcp_server`, `unmount_mcp_tools`, `MCPMountReceipt`).
 - **Optimasi Konteks & UX Tool Memory**:
   - Peningkatan kemudahan model pada `graph:locate` (penyertaan `section_id` lengkap) dan `graph:read_section` (toleran input `slug#section`).
   - MoA Context Pruning & Truncation Guard untuk mencegah luapan token pada layer agregasi multi-agen.
