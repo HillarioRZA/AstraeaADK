@@ -69,11 +69,12 @@ from AstraeaADK import (
 - `raise_if_cancelled() -> None`: Melempar `asyncio.CancelledError` jika dibatalkan.
 
 ### `StreamEvent` & `StreamEventType`
-- `event_type: StreamEventType`: `TOKEN`, `THOUGHT`, `TOOL_CALL`, `TOOL_RESULT`, `TURN_START`, `TURN_END`.
+- `StreamEventType` adalah alias `Literal` string (bukan Enum): `TURN_STARTED`, `TOKEN_DELTA`, `TOOL_START`, `COV_REJECTED`, `TOOL_END`, `PROPOSER_DONE`, `AGGREGATOR_START`, `TURN_FINISHED`.
+- `event_type: StreamEventType`: Jenis event yang dipancarkan.
 - `agent_handle: str`: Handle agen yang sedang aktif memancarkan event.
-- `delta: str`: Potongan teks token baru atau reasoning.
-- `tool_name: Optional[str]`: Nama tool saat tool call/result.
-- `payload: Optional[Dict[str, Any]]`: Argumen tool atau metadata.
+- `delta: str`: Potongan teks token baru (khusus saat `event_type == "TOKEN_DELTA"`).
+- `detail: str`: Nama tool, putaran debat, atau alasan penolakan CoV.
+- `timestamp: float`: Waktu epoch saat event dipancarkan.
 
 ---
 
@@ -134,11 +135,22 @@ async def run_autonomous_triage(
 ```
 
 ### `OrchestrationPolicy` (`frozen=True`)
-- `max_discussion_rounds: int = 1`: Jumlah putaran perdebatan antar-proposer.
+- `max_discussion_rounds: int = 2`: Jumlah putaran perdebatan antar-proposer.
+- `max_parallel_proposers: int = 5`: Batas maksimum Proposer yang berjalan paralel.
 - `max_delegation_depth: int = 3`: Batas kedalaman rekursi Strict Chain-of-Command.
-- `proposer_timeout_seconds: float = 60.0`: Batas waktu per proposer (isolasi kegagalan).
 - `allow_proposer_tier1_mutations: bool = False`: Blokir mutasi Tier >= 1 saat Proposer paralel demi konkurensi aman.
-- `require_all_proposers: bool = False`: Jika False, kegagalan 1 proposer tidak menggagalkan sintesis agregator.
+- `total_token_budget: Optional[int] = None`: Batas akumulasi token gabungan seluruh agen.
+- `turn_policy: TurnPolicy`: Kebijakan per-giliran yang diteruskan ke `execute_turn`.
+
+### `OrchestrationResult` (`frozen=True`)
+- `status: Literal["COMPLETED", "PARTIAL_PROPOSALS", "BUDGET_EXCEEDED", "CANCELLED", "TERMINATED", "ERROR"]`
+- `mode: Literal["STANDALONE", "EXPLICIT_MOA", "AUTONOMOUS_TRIAGE"]`
+- `final_content: str`: Teks sintesis akhir Aggregator atau koordinator. (Berbeda dari `TurnResult.content`.)
+- `aggregator_handle: str`, `proposer_handles: Tuple[str, ...]`, `rounds_executed: int`
+- `proposals: Tuple[ProposalRecord, ...]`, `envelopes_log: Tuple[MessageEnvelope, ...]`
+- `total_prompt_tokens: int`, `total_cached_tokens: int`, `total_completion_tokens: int`
+- `session_states: Mapping[str, SessionState]`
+- `is_successful -> bool`: Properti, True jika status `COMPLETED` atau `PARTIAL_PROPOSALS`.
 
 ---
 
@@ -164,20 +176,23 @@ async def execute_turn(
 ```
 
 ### `TurnResult` (`frozen=True`)
-- `status: Literal["COMPLETED", "TOOL_LIMIT_EXCEEDED", "BUDGET_EXCEEDED", "CANCELLED", "TERMINATED", "ERROR"]`
-- `final_content: str`: Respon teks final agen.
-- `tool_history: Tuple[Dict[str, Any], ...]`: Riwayat panggilan tool dan hasilnya.
+- `status: Literal["COMPLETED", "IN_PROGRESS", "BLOCKED_LOOP", "EXCEEDED_MAX_TURNS", "BUDGET_EXCEEDED", "CANCELLED", "TERMINATED", "ERROR"]`
+- `content: str`: Respon teks utama agen pada turn ini. (Untuk hasil orkestrasi, padanannya adalah `OrchestrationResult.final_content`.)
+- `reasoning: str`: Penalaran atau thought internal model (bila ada).
+- `tool_results: Tuple[Dict[str, Any], ...]`: Hasil eksekusi tool pada turn ini; setiap entri berisi `tool_call_id`, `tool_name`, `status`, `output`.
 - `prompt_tokens: int`, `cached_tokens: int`, `completion_tokens: int`: Statistik token.
-- `rounds_count: int`: Jumlah putaran LLM dalam turn ini.
-- `is_successful -> bool`: Properti True jika `status == "COMPLETED"`.
+- `rounds_used: int`: Jumlah panggilan model yang terjadi dalam turn ini.
+- `session_state: SessionState`: Keadaan sesi terbaru setelah turn selesai.
+- `guardian_report: Optional[GuardianReport]`: Snapshot laporan tata kelola jika terjadi eskalasi atau terminasi sesi.
+- `message: str`: Pesan diagnostik atau catatan tambahan terkait status turn.
 
 ---
 
 ## 5. Tools & RBAC (`AstraeaADK.tools`)
 
 - `register_tool(name: str, description: str, parameters_schema: Dict[str, Any], risk_tier: Literal[0, 1, 2] = 0, handler: Callable) -> ToolSpec`: Mendaftarkan fungsi native ke registri.
-- `mount_mcp_server(command: str, args: List[str], env: Optional[Dict[str, str]] = None, name_prefix: str = "mcp", risk_tier: Literal[0, 1, 2] = 1) -> MCPMountReceipt`: Memasang server eksternal Anthropic MCP via stdio JSON-RPC.
-- `unmount_mcp_tools(mount_id: str) -> bool`: Melepas tool MCP dan menghentikan subproses.
+- `mount_mcp_server(namespace: str, mcp_session: Any, *, default_risk_tier: Literal[0, 1, 2] = 1, risk_tier_overrides: Optional[Mapping[str, Literal[0, 1, 2]]] = None, skill_markdown_path: Optional[Union[str, Path]] = None, graph_memory: Optional[MarkdownGraphMemory] = None, allow_overwrite: bool = True) -> MCPMountReceipt` (async): Mendaftarkan tool dari sesi MCP yang SUDAH terhubung ke Permission Registry. Bridge tidak men-spawn proses server; `mcp_session` disediakan pemanggil dan wajib memiliki metode `list_tools()` serta `call_tool(name, arguments)`. Risk tier selalu ditetapkan pemanggil, tidak pernah dari anotasi server. Receipt berisi `namespace`, `registered_tools: Tuple[str, ...]`, dan `skill_node_id: Optional[str]`.
+- `unmount_mcp_tools(target: Union[MCPMountReceipt, str]) -> int`: Sinkron (tanpa await). Melepas tool MCP berdasarkan receipt atau namespace; mengembalikan jumlah tool yang dicopot.
 - `guard_tool_output(output: str) -> Tuple[str, SpillResult]`: Memastikan output tool tidak melebihi batas aman 50 KB (51.200 byte) dengan pemotongan multi-byte aman.
 
 ---

@@ -6,7 +6,7 @@ description: >-
 
 # Astraea-ADK (`AstraeaADK`) Developer Guide & Skill
 
-**Astraea-ADK** adalah runtime dan framework orkestrasi multi-agen (*Mixture-of-Agents / MoA*) berperforma tinggi, deterministik, dan aman untuk Python (>=3.10).
+**Astraea-ADK** adalah runtime dan framework orkestrasi multi-agen (*Mixture-of-Agents / MoA*) berperforma tinggi dan aman untuk Python (>=3.10). Keputusan orkestrasi bersifat probabilistik (digerakkan oleh LLM), sedangkan governance dan invariantnya deterministik: permission registry, verifikasi CoV, batas kedalaman delegasi, dan circuit breaker.
 Distribusi PyPI: `pip install astraea-adk`
 Nama paket impor Python: `import AstraeaADK`
 
@@ -94,7 +94,7 @@ async def main():
     msg = contract_message(sender="@user", target="@support", content="Berapa sisa kuota saya dengan ID usr_42?")
     
     result = await execute_turn(spec=spec, envelope=msg, session_state=state)
-    print("Jawaban:", result.final_content)
+    print("Jawaban:", result.content)
     print("Status :", result.status)
 
 asyncio.run(main())
@@ -251,41 +251,47 @@ print(f"Knowledge Graph: {health.total_nodes} nodes, {health.total_edges} edges"
 
 ### Pola E: Model Context Protocol (MCP) Bridge
 
-Integrasi server perkakas MCP eksternal berbasis stdio JSON-RPC secara instan:
+Memasang tool dari server MCP eksternal ke Permission Registry. Penting: bridge AstraeaADK **tidak men-spawn proses server**. Pemanggil menyediakan objek sesi MCP yang sudah terhubung (misalnya dari MCP client SDK, lewat transport stdio atau SSE) yang memiliki metode `list_tools()` dan `call_tool(name, arguments)`. Risk tier selalu ditetapkan oleh pemanggil, tidak pernah dibaca dari anotasi server.
 
 ```python
 from AstraeaADK import mount_mcp_server, unmount_mcp_tools
 
-async def setup_mcp():
+async def setup_mcp(mcp_session):
+    # mcp_session: sesi MCP yang SUDAH terhubung, disediakan aplikasi pemanggil
     receipt = await mount_mcp_server(
-        command="npx",
-        args=["-y", "@modelcontextprotocol/server-filesystem", "./workspace"],
-        name_prefix="fs",
-        risk_tier=1,
+        "fs",  # namespace untuk tool MCP ini
+        mcp_session,
+        default_risk_tier=1,
     )
-    print("Tool MCP terdaftar:", receipt.registered_tool_names)
-    # Output: ['fs:read_file', 'fs:write_file', 'fs:list_directory', ...]
+    print("Tool MCP terdaftar:", receipt.registered_tools)
+    # Contoh: ('fs:list_directory', 'fs:read_file', 'fs:write_file')
+    return receipt
 
-    # Unmount bersih saat aplikasi ditutup
-    # await unmount_mcp_tools(receipt.mount_id)
+def teardown_mcp(receipt):
+    # unmount_mcp_tools bersifat sinkron (tanpa await); menerima MCPMountReceipt
+    # atau string namespace dan mengembalikan jumlah tool yang dicopot
+    removed = unmount_mcp_tools(receipt)
+    print("Tool dicopot:", removed)
 ```
 
 ---
 
 ### Pola F: Real-Time Event & Token Streaming
 
-Meneruskan token, jejak penalaran (*thinking* / `<think>...</think>`), dan status tool secara langsung ke UI/CLI tanpa memutus kontrak data statis:
+Meneruskan token dan status eksekusi secara langsung ke UI/CLI tanpa memutus kontrak data statis. `StreamEventType` adalah alias `Literal` string, bukan Enum, jadi bandingkan `event.event_type` dengan string literalnya. Nilai yang valid: `TURN_STARTED`, `TOKEN_DELTA`, `TOOL_START`, `COV_REJECTED`, `TOOL_END`, `PROPOSER_DONE`, `AGGREGATOR_START`, `TURN_FINISHED`. Field `StreamEvent` hanya `event_type`, `agent_handle`, `delta` (potongan token, khusus TOKEN_DELTA), `detail` (nama tool, putaran debat, atau alasan penolakan CoV), dan `timestamp`.
 
 ```python
-from AstraeaADK import StreamEvent, StreamEventType, dispatch_envelope
+from AstraeaADK import StreamEvent, dispatch_envelope
 
 async def stream_callback(event: StreamEvent) -> None:
-    if event.event_type == StreamEventType.TOKEN:
+    if event.event_type == "TOKEN_DELTA":
         print(event.delta, end="", flush=True)
-    elif event.event_type == StreamEventType.THOUGHT:
-        print(f"\033[90m{event.delta}\033[0m", end="", flush=True)
-    elif event.event_type == StreamEventType.TOOL_CALL:
-        print(f"\n[Tool Panggil] {event.tool_name}({event.payload})")
+    elif event.event_type == "TOOL_START":
+        print(f"\n[Tool mulai] {event.detail}")
+    elif event.event_type == "TOOL_END":
+        print(f"\n[Tool selesai] {event.detail}")
+    elif event.event_type == "COV_REJECTED":
+        print(f"\n[CoV menolak tool] {event.detail}")
 
 # Berikan callback ke on_event pada execute_turn, run_moa_debate, atau dispatch_envelope
 result = await dispatch_envelope(envelope, roster, on_event=stream_callback)

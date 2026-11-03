@@ -51,7 +51,7 @@ Penyedia LLM (OpenAI, Anthropic, Gemini, DeepSeek) menawarkan diskon biaya hingg
 - `LEGION_CACHE_BOUNDARY`: Penanda pemisah statis vs dinamis.
 - Di atas batas: `soul_prompt` + `system_prompt` + skema tool yang diurutkan secara alfabetis deterministik. Hash SHA-256 diverifikasi pada RAM.
 - Di bawah batas: Konteks dinamis giliran, riwayat percakapan, dan hasil eksekusi tool.
-- Hasil: 100% konsisten lintas putaran, menjamin >90% Cache HIT rate pada trafik berkelanjutan.
+- Hasil terukur pada benchmark internal framework: prefix byte-stable 100% konsisten lintas 20 putaran. Tingkat cache hit aktual di sisi provider bergantung pada kebijakan dan pelaporan masing-masing provider, sehingga tidak digaransikan di dokumen ini.
 
 ---
 

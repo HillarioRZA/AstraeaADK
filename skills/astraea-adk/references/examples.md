@@ -55,7 +55,6 @@ async def main():
     policy = OrchestrationPolicy(
         max_discussion_rounds=1,
         max_delegation_depth=2,
-        proposer_timeout_seconds=45.0,
     )
 
     result = await dispatch_envelope(envelope=envelope, roster=roster, policy=policy)
@@ -115,8 +114,8 @@ async def main():
     )
 
     turn = await execute_turn(spec=researcher_spec, envelope=msg, session_state=state)
-    print("Hasil Riset:", turn.final_content)
-    print("Tool Terpanggil:", [call["tool_name"] for call in turn.tool_history])
+    print("Hasil Riset:", turn.content)
+    print("Tool Terpanggil:", [call["tool_name"] for call in turn.tool_results])
 
 if __name__ == "__main__":
     asyncio.run(main())
@@ -124,9 +123,9 @@ if __name__ == "__main__":
 
 ---
 
-## Contoh 3: Integrasi MCP Filesystem Server dengan Real-Time Token Streaming
+## Contoh 3: Integrasi MCP dengan Real-Time Token Streaming
 
-Kasus: Menghubungkan tool server MCP ke agen dan menyiarkan token jawaban kata-demi-kata ke terminal.
+Kasus: Menghubungkan tool server MCP ke agen dan menyiarkan token jawaban kata-demi-kata ke terminal. Bridge AstraeaADK tidak men-spawn server MCP, jadi contoh ini menerima `mcp_session` yang sudah terhubung oleh aplikasi pemanggil (misalnya lewat MCP client SDK).
 
 ```python
 import asyncio
@@ -134,7 +133,6 @@ from AstraeaADK import (
     LLMSpec,
     SessionState,
     StreamEvent,
-    StreamEventType,
     contract_message,
     execute_turn,
     mount_mcp_server,
@@ -142,23 +140,22 @@ from AstraeaADK import (
 )
 
 async def on_stream(event: StreamEvent) -> None:
-    if event.event_type == StreamEventType.TOKEN:
+    # StreamEventType adalah Literal string, bukan Enum
+    if event.event_type == "TOKEN_DELTA":
         print(event.delta, end="", flush=True)
-    elif event.event_type == StreamEventType.THOUGHT:
-        # Warna abu-abu untuk pemikiran internal
-        print(f"\033[90m{event.delta}\033[0m", end="", flush=True)
-    elif event.event_type == StreamEventType.TOOL_CALL:
-        print(f"\n[Memanggil Tool: {event.tool_name}]...")
+    elif event.event_type == "TOOL_START":
+        print(f"\n[Memanggil Tool: {event.detail}]...")
+    elif event.event_type == "COV_REJECTED":
+        print(f"\n[CoV menolak tool: {event.detail}]")
 
-async def main():
-    # 1. Pasang Server MCP
+async def main(mcp_session):
+    # 1. Pasang tool dari sesi MCP yang sudah terhubung
     receipt = await mount_mcp_server(
-        command="npx",
-        args=["-y", "@modelcontextprotocol/server-filesystem", "./data_dir"],
-        name_prefix="fs",
-        risk_tier=1,
+        "fs",
+        mcp_session,
+        default_risk_tier=1,
     )
-    print(f"Tool MCP Aktif: {receipt.registered_tool_names}\n")
+    print(f"Tool MCP Aktif: {receipt.registered_tools}\n")
 
     spec = LLMSpec(
         handle="@assistant",
@@ -182,9 +179,11 @@ async def main():
             session_state=state,
             on_event=on_stream,
         )
+        print("\nHasil:", result.content)
     finally:
-        await unmount_mcp_tools(receipt.mount_id)
+        # unmount_mcp_tools sinkron (tanpa await)
+        removed = unmount_mcp_tools(receipt)
+        print(f"Tool MCP dicopot: {removed}")
 
-if __name__ == "__main__":
-    asyncio.run(main())
+# Panggil dari kode yang memiliki sesi MCP aktif: await main(mcp_session)
 ```
