@@ -50,8 +50,8 @@ if ENV_PATH.exists():
             k, v = line.split("=", 1)
             os.environ.setdefault(k.strip(), v.strip())
 
-import LegionADK  # noqa: E402
-from LegionADK import (  # noqa: E402
+import AstraeaADK  # noqa: E402
+from AstraeaADK import (  # noqa: E402
     LLMSpec,
     MarkdownGraphMemory,
     SessionState,
@@ -62,7 +62,7 @@ from LegionADK import (  # noqa: E402
     execute_turn,
     register_graph_memory_tools,
 )
-from LegionADK.memory import MutationRequest  # noqa: E402
+from AstraeaADK.memory import MutationRequest  # noqa: E402
 
 CATEGORY_NAMES = {1: "Multi-Hop", 2: "Temporal", 3: "Open-Domain", 4: "Single-Hop", 5: "Adversarial"}
 STOPWORDS = set(
@@ -340,8 +340,8 @@ def _save(results, plant_report, preflight, t_start, sample_id) -> None:
         c["accuracy_pct"] = round(c["correct"] / c["total"] * 100.0, 1) if c["total"] else 0.0
     correct = sum(1 for r in results if r["correct"])
     meta = {
-        "legionadk_version": LegionADK.__version__,
-        "legionadk_path": LegionADK.__file__,
+        "astraeaadk_version": AstraeaADK.__version__,
+        "astraeaadk_path": AstraeaADK.__file__,
         "model": MODEL,
         "provider": "custom",
         "sample_id": sample_id,

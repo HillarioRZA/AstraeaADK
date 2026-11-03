@@ -40,8 +40,8 @@ if ENV_PATH.exists():
             k, v = line.split("=", 1)
             os.environ.setdefault(k.strip(), v.strip())
 
-import LegionADK  # noqa: E402
-from LegionADK import (  # noqa: E402
+import AstraeaADK  # noqa: E402
+from AstraeaADK import (  # noqa: E402
     LLMSpec,
     SessionState,
     ToolSpec,
@@ -258,8 +258,8 @@ async def main() -> None:
 def _save(results, t_start) -> None:
     correct = sum(1 for r in results if r["correct"])
     meta = {
-        "legionadk_version": LegionADK.__version__,
-        "legionadk_path": LegionADK.__file__,
+        "astraeaadk_version": AstraeaADK.__version__,
+        "astraeaadk_path": AstraeaADK.__file__,
         "model": MODEL,
         "provider": "custom",
         "total_tasks": len(results),

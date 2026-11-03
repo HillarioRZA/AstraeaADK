@@ -1,9 +1,9 @@
 """
-BFCL v3 OFFICIAL-DATASET SUBSET RUN THROUGH ASTRAEA-ADK (LegionADK).
+BFCL v3 OFFICIAL-DATASET SUBSET RUN THROUGH ASTRAEA-ADK (AstraeaADK).
 
 Sama seperti pack terverifikasi 2026-11-02 (pencocokan AST mengikuti semantik BFCL),
 dengan perubahan: subset bawaan diperbesar (simple 100 + multiple 100, soal pertama
-secara deterministik), versi dan path LegionADK dicatat, provider langsung via
+secara deterministik), versi dan path AstraeaADK dicatat, provider langsung via
 proxy environment (tanpa relay).
 
 CATATAN KEJUJURAN: dataset resmi + evaluasi AST mengikuti BFCL melalui engine
@@ -31,8 +31,8 @@ if ENV_PATH.exists():
             k, v = line.split("=", 1)
             os.environ.setdefault(k.strip(), v.strip())
 
-import LegionADK  # noqa: E402
-from LegionADK import (  # noqa: E402
+import AstraeaADK  # noqa: E402
+from AstraeaADK import (  # noqa: E402
     LLMSpec,
     SessionState,
     ToolSpec,
@@ -223,8 +223,8 @@ def _meta(all_results, summary, t0):
     total_ok = sum(1 for r in all_results if r["correct"])
     total_n = len(all_results)
     return {
-        "legionadk_version": LegionADK.__version__,
-        "legionadk_path": LegionADK.__file__,
+        "astraeaadk_version": AstraeaADK.__version__,
+        "astraeaadk_path": AstraeaADK.__file__,
         "model": MODEL,
         "provider": "custom (TokenomixAI langsung via proxy environment)",
         "temperature": 0.0,
