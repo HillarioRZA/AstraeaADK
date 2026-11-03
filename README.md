@@ -125,6 +125,40 @@ TEST_PRIMARY_MODEL=deepseek-v4.1-flash
 
 ---
 
+## 🤖 Instalasi Skill untuk AI Coding Assistant (Antigravity, Cursor, Claude Code, Copilot)
+
+Jika Anda atau tim Anda mengembangkan agen menggunakan AI Coding Assistant (**Google Antigravity**, **Cursor IDE**, **Claude Code**, **Windsurf**, **GitHub Copilot**), pasang **Astraea-ADK Skill** secara instan agar AI di sesi mana pun langsung memahami seluruh spesifikasi API publik, pola orkestrasi MoA, aturan *cache boundary*, *streaming*, dan arsitektur v1.5.2 tanpa memerlukan akses ke kode sumber *proprietary*.
+
+### Cara 1: Satu Baris Perintah (Otomatis & Tanpa Clone)
+Jalankan perintah ini di terminal (Windows / macOS / Linux):
+
+```bash
+python -c "import urllib.request; exec(urllib.request.urlopen('https://raw.githubusercontent.com/HillarioRZA/AstraeaADK/main/install_skill.py').read())"
+```
+
+### Cara 2: Dari Repositori Lokal
+Jika Anda telah mengkloning repositori ini:
+
+```bash
+# Pasang ke tingkat Global Mesin (Antigravity & Claude Code)
+python install_skill.py --global
+
+# Pasang ke Workspace / Proyek yang sedang aktif (.agents/skills & .cursor/rules)
+python install_skill.py --workspace .
+
+# Atau pasang ke keduanya sekaligus
+python install_skill.py --all
+```
+
+**Target Direktori yang Didukung Otomatis:**
+1. **Antigravity Global**: `~/.gemini/config/skills/astraea-adk/` & plugin `~/.gemini/config/plugins/astraea-adk/`
+2. **Antigravity Workspace**: `<project>/.agents/skills/astraea-adk/`
+3. **Cursor IDE Rules**: `<project>/.cursor/rules/astraea-adk.mdc`
+4. **Claude Code**: `~/.claude/skills/astraea-adk/` dan `<project>/.claude/skills/astraea-adk/`
+5. **Universal Coding Agents (Windsurf, Devin, Copilot)**: `<project>/AGENTS.md`
+
+---
+
 ## Contoh Penggunaan Cepat
 
 ### 1. Orkestrasi Multi-Agen & Strict Chain-of-Command (`AstraeaADK.protocol`)

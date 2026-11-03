@@ -1,0 +1,13 @@
+{
+  "name": "astraea-adk",
+  "displayName": "Astraea-ADK Framework",
+  "version": "1.5.2",
+  "description": "Comprehensive skill and agent knowledge pack for building autonomous multi-agent systems with Astraea-ADK (AstraeaADK).",
+  "author": "Hillario RZA",
+  "homepage": "https://github.com/HillarioRZA/AstraeaADK",
+  "suggestedPrompts": [
+    "Rancang sistem multi-agen dengan AstraeaADK untuk analisis data",
+    "Bagaimana cara menggunakan autonomous graph memory di AstraeaADK?",
+    "Buat implementasi triase otonom dan debat MoA dengan AstraeaADK"
+  ]
+}
